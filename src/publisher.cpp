@@ -413,6 +413,18 @@ double getGazeRatio(Mat &frame, Rect faceRect) {
         }
     }
 
+    // Some error handling
+    // max corners should not be lower than min corners
+    if (rightMaxCorner.x <= rightMinCorner.x ||
+    	leftMaxCorner.x <= leftMinCorner.x) {
+    	return 0.5; // return ratio corresponding to straight ahead; should change to most recent valid ratio
+    }
+    // min corners should not be greater than pupils
+    if (rightPupil.x < rightMinCorner.x ||
+    	leftPupil.x < leftMinCorner.x) {
+    	return 0.5;
+    } 
+    // should throw out cases that only appear in one frame before disappearing (noise); could maybe do this later when processing commands
 
     float rightEyeLength = abs(rightMaxCorner.x - rightMinCorner.x);
     float leftEyeLength = abs(leftMaxCorner.x - leftMinCorner.x);
@@ -460,7 +472,7 @@ int main(int argc, char **argv) {
 	// advertise function tells ROS you want to advertise on a given topic (param 1)
 	// can publish messages on the topic through the publish() function.
 	// second param is the size of the message queue
-	ros::Publisher pub = n.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
+	ros::Publisher pub = n.advertise<geometry_msgs::Twist>("/turtle1/cmd_vel", 10);
 	// Loop rate in Hz
 	ros::Rate loop_rate(500);
 
@@ -517,18 +529,19 @@ int main(int argc, char **argv) {
         }
 
 		// display the frame
-		imshow("frame", frame);
-		waitKey(1);
+		// commented out-- slowing it down?
+		//imshow("frame", frame);
+		//waitKey(1);
 	
 		// only publish message if it's a DIFFERENT direction from before
-		if (prev_cmd.linear.x != cmd.linear.x || prev_cmd.angular.z != cmd.angular.z) {
+		//if (prev_cmd.linear.x != cmd.linear.x || prev_cmd.angular.z != cmd.angular.z) {
 			cout << gaze_ratio << endl;
 			pub.publish(cmd);
 			// call all the callbacks
 			ros::spinOnce();
 			prev_cmd.linear.x = cmd.linear.x; // not sure if it'd be deep or shallow copy.. too tired to check
 			prev_cmd.angular.z = cmd.angular.z;
-		}
+		///}
 		
 		// sleep for the remaining time to his the 10Hz publish rate
 		loop_rate.sleep();
